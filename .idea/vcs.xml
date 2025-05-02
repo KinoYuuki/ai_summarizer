@@ -2,5 +2,9 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/ai_summarizer" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/ai_summarizer/ai_summarizer" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/ai_summarizer_backup" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/ai_summarizer_backup/ai_summarizer" vcs="Git" />
   </component>
 </project>

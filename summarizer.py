@@ -1,14 +1,17 @@
 import sys
-from summarizer.engine import generate_summary, inspect_training_data
+from summarizer.engine import generate_summary
 from summarizer.cli import create_parser
+from summarizer.training import train_model, inspect_training_data
 
 def main():
     parser = create_parser()
     args = parser.parse_args()
 
-    if args.train_data:
+    if args.inspect_training:
         inspect_training_data(debug=args.debug)
         return
+    elif args.train:
+        train_model(debug=args.debug)
 
     if args.debug:
         print("\n🔍 DEBUG MODE ACTIVATED")

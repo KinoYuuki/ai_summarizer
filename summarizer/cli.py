@@ -10,8 +10,10 @@ def create_parser():
     input_group.add_argument("--text", help="Direct text input")
     input_group.add_argument("--file", type=str, help="Path to .txt file")
     input_group.add_argument("--url", help="URL to summarize")
-    input_group.add_argument("--train-data", action="store_true",
-                             help="Inspect training data structure")
+    input_group.add_argument("--inspect-training", action="store_true",
+                             help="Validate training data structure and show statistics")
+    input_group.add_argument("--train", action="store_true",
+                             help="Train the summarization model")
 
     output_group = parser.add_argument_group("Output Options")
     output_group.add_argument("--output", help="Save summary to file")

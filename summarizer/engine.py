@@ -2,7 +2,6 @@ import re, sys, requests
 from pathlib import Path
 from typing import Dict
 from bs4 import BeautifulSoup
-from datasets import load_dataset
 from transformers import pipeline
 from summarizer.hardware.detector import detect_hardware
 from summarizer.hardware.optimizers import apply_amd_optimizations, apply_cpu_optimizations
@@ -90,34 +89,6 @@ def initialize_model(config: Dict, debug: bool = False):
     summarizer.tokenizer.model_max_length = 512
     summarizer.model.config.max_length = 200
     return summarizer
-
-
-def inspect_training_data(debug=False):
-    """Working version with proper dataset loading"""
-    try:
-        from datasets import load_dataset
-
-        print("\n🔍 TRAINING DATA INSPECTION")
-        dataset = load_dataset("text", data_files={
-            "train": "training_data/inputs.txt",
-            "validation": "training_data/summaries.txt"
-        })
-
-        if debug:
-            print("\nSample Input:")
-            print(dataset["train"]["text"][0][:100] + "...")
-            print("\nSample Summary:")
-            print(dataset["validation"]["text"][0][:100] + "...")
-
-        return dataset
-
-    except Exception as e:
-        print(f"\n❌ Inspection Failed: {str(e)}")
-        print("Required structure:")
-        print("training_data/")
-        print("├── inputs.txt    (Original texts)")
-        print("└── summaries.txt (Your summaries)")
-        return None
 
 def generate_summary(args):
     """Main summary generation function with resource cleanup"""
