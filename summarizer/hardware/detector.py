@@ -1,28 +1,31 @@
-import os, torch
+import os
+import torch
+from functools import lru_cache
 
+@lru_cache(maxsize=1)
 def detect_hardware():
-    """Auto-detects available hardware and returns optimal settings"""
+    """Cached hardware detection with comprehensive device support"""
     config = {
         "device": "cpu",
-        "threads": os.cpu_count(),
+        "threads": max(1, os.cpu_count() - 1),  # Leave 1 core free
         "framework": "pt"
     }
 
     if torch.cuda.is_available():
         config.update({
             "device": "cuda",
-            "torch_dtype": "auto"
+            "torch_dtype": "auto",
+            "gpu_count": torch.cuda.device_count()
         })
     elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-        config.update({
-            "device": "mps"  # Apple Silicon
-        })
+        config["device"] = "mps"
 
-    # AMD ROCm detection (optional)
+    # AMD ROCm detection
     if torch.version.hip:
         config.update({
             "device": "cuda",
-            "amd_optimized": True
+            "amd_optimized": True,
+            "rocm_version": torch.version.hip
         })
 
     return config

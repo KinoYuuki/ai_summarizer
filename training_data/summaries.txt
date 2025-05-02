@@ -1,0 +1,3 @@
+Python: High-level language
+Hugging Face: NLP leader
+Fox jumps over dog

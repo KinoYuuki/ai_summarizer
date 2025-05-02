@@ -1,25 +1,24 @@
-import os, platform
+import os
+import platform
+from typing import Dict
 
-def apply_amd_optimizations():
-    """AMD-specific performance tweaks"""
+def apply_amd_optimizations(config: Dict):
     os.environ.update({
-        'OMP_NUM_THREADS': str(os.cpu_count()),
-        'TOKENIZERS_PARALLELISM': 'false',
-        'HF_HUB_DISABLE_SYMLINKS_WARNING': '1'
+        'OMP_NUM_THREADS': str(config['threads']),
+        'TOKENIZERS_PARALLELISM': 'false'
     })
 
-def apply_nvidia_optimizations():
-    """NVIDIA-specific performance tweaks"""
-    os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # Better debug if needed
-
-def apply_cpu_optimizations():
-    """Optimizations for CPU-only systems"""
+def apply_nvidia_optimizations(config: Dict):
+    """NVIDIA-specific settings"""
     os.environ.update({
-        'OMP_NUM_THREADS': str(os.cpu_count()),  # Use all cores
-        'TOKENIZERS_PARALLELISM': 'false',       # Prevent tokenizer conflicts
-        'NUMEXPR_NUM_THREADS': str(min(4, os.cpu_count())),  # Limit NumPy threads
-        'TF_NUM_INTEROP_THREADS': '1',           # Better TensorFlow interop
-        'TF_NUM_INTRAOP_THREADS': str(os.cpu_count())  # TensorFlow thread count
+        'CUDA_LAUNCH_BLOCKING': '1',
+        'TF_FORCE_GPU_ALLOW_GROWTH': 'true'
     })
-    if platform.system() == 'Linux':
-        os.environ['OMP_SCHEDULE'] = 'STATIC'    # Better Linux thread scheduling
+
+def apply_cpu_optimizations(config: Dict):
+    os.environ.update({
+        'OMP_NUM_THREADS': str(config['threads']),
+        'NUMEXPR_NUM_THREADS': str(config['threads']),
+        'TF_NUM_INTEROP_THREADS': '1',
+        'TF_NUM_INTRAOP_THREADS': str(config['threads'])
+    })
