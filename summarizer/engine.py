@@ -1,16 +1,11 @@
-import re, sys, requests
+import re, sys, requests, time
 from pathlib import Path
 from typing import Dict
 from bs4 import BeautifulSoup
 from transformers import pipeline
 from summarizer.hardware.detector import detect_hardware
 from summarizer.hardware.optimizers import apply_amd_optimizations, apply_cpu_optimizations
-
-# Constants
-DEFAULT_MODEL = "sshleifer/distilbart-cnn-6-6"
-VERSION_PATTERN = re.compile(r'\b(?:[a-zA-Z]+ \d+\.\d+(?:\.\d+)*|\d+\.\d+\.\d+)\b')
-PUNCTUATION_PATTERN = re.compile(r'\s+([.,!?])')
-
+from summarizer.constants import MODELS, VERSION_PATTERN, PUNCTUATION_PATTERN
 
 def clean_summary(text: str) -> str:
     """Enhanced text cleaning with version number preservation"""
@@ -43,7 +38,6 @@ def format_bullets(text: str) -> str:
 
 
 def print_output(summary: str, args) -> None:
-    """Print formatted output based on arguments"""
     print("\n" + "=" * 50)
     print(f"📝 SUMMARY ({len(summary.split())} words)".center(50))
     print("=" * 50)
@@ -57,7 +51,6 @@ def print_output(summary: str, args) -> None:
 
 
 def get_input_text(args) -> str:
-    """Get input text from file, direct input, or URL"""
     if args.file:
         path = Path(args.file)
         if not path.exists():
@@ -72,11 +65,11 @@ def get_input_text(args) -> str:
         return ' '.join(p.get_text().strip() for p in soup.find_all('p') if p.get_text().strip())
 
 
-def initialize_model(config: Dict, debug: bool = False):
-    """Initialize the summarization pipeline"""
+def initialize_model(config: Dict, debug: bool = False, model_key: str = 'fast'):
+    """Initialize the summarization pipeline with model selection"""
     model_params = {
         'task': 'summarization',
-        'model': DEFAULT_MODEL,
+        'model': MODELS[model_key],
         'device': config['device'],
         'framework': config['framework'],
         'torch_dtype': config.get('torch_dtype')
@@ -84,20 +77,41 @@ def initialize_model(config: Dict, debug: bool = False):
 
     if debug:
         print(f"\n⚙️ Model Config: {model_params}")
+        print(f"Selected Model: {model_key} -> {MODELS[model_key]}")
 
     summarizer = pipeline(**model_params)
     summarizer.tokenizer.model_max_length = 512
     summarizer.model.config.max_length = 200
     return summarizer
 
-def generate_summary(args):
-    """Main summary generation function with resource cleanup"""
+
+def generate_summary(args, model_key='fast'):
     summarizer = None
     try:
-        # Hardware setup
-        hw_config = detect_hardware()
+        # Start timer right before heavy processing
         if args.debug:
-            print(f"\n⚙️ Hardware Config: {hw_config}")
+            start_time = time.time()
+
+        # Process input first to check length
+        input_text = get_input_text(args)
+        word_count = len(input_text.split())
+
+        if model_key not in MODELS:
+            raise ValueError(f"Invalid model key: {model_key}. Choose from {list(MODELS.keys())}")
+
+        # Handle short texts (original behavior)
+        if word_count < 25:  # Adjust threshold as needed
+            if args.debug:  # Add debug info for short text
+                print(f"\nℹ️ Debug: Text too short ({word_count} words < 25)")
+                print(f"Selected model: {model_key} ({MODELS[model_key]})")
+            print("\nℹ️  Input is too short - returning original text:")
+            print("=" * 50)
+            print(input_text)
+            print("=" * 50)
+            return
+
+        # Only proceed with hardware setup if text is long enough
+        hw_config = detect_hardware()
 
         # Apply optimizations
         if hw_config.get("amd_optimized"):
@@ -106,20 +120,28 @@ def generate_summary(args):
             apply_cpu_optimizations(hw_config)
 
         # Initialize pipeline
-        summarizer = initialize_model(hw_config, args.debug)
+        summarizer = initialize_model(hw_config, args.debug, model_key)
 
-        # Process input
-        input_text = get_input_text(args)
-        if not input_text.strip():
-            raise ValueError("No meaningful text extracted from input")
+        length_params = {
+            'short': 0.3,  # 30% of original
+            'medium': 0.4,  # 40% of original
+            'long': 0.6  # 60% of original
+        }
 
-        # Generate summary
+        compression = length_params[args.length]
+
         summary = summarizer(
             input_text,
-            max_length=min(150, max(40, int(len(input_text.split()) * 0.4))),
-            min_length=min(30, max(15, int(len(input_text.split()) * 0.2))),
+            max_length=min(200, max(40, int(word_count * compression))),
+            min_length=min(30, max(15, int(word_count * compression * 0.5))),
             do_sample=False
         )[0]['summary_text']
+
+        if args.debug:
+            print(f"\n⚙️ Hardware Config: {hw_config}")
+            print(f"⚙️ Selected Model: {model_key} -> {MODELS[model_key]}")
+            elapsed = time.time() - start_time
+            print(f"⚡ Processing time: {elapsed:.2f}s | Speed: {len(input_text)/elapsed:.0f} chars/sec")
 
         # Format and print output
         print_output(summary, args)

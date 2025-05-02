@@ -25,7 +25,7 @@ def main():
         sys.exit(1)
 
     try:
-        generate_summary(args)
+        generate_summary(args, model_key=args.model)
     except KeyboardInterrupt:
         print("\n🛑 Operation cancelled by user")
         sys.exit(130)

@@ -19,9 +19,15 @@ def create_parser():
     output_group.add_argument("--output", help="Save summary to file")
     output_group.add_argument("--bullets", action="store_true",
                               help="Format as bullet points")
+    output_group.add_argument("--length", choices=['short', 'medium', 'long'],
+                              default='medium', help="Summary length preference")
 
     config_group = parser.add_argument_group("Configuration")
     config_group.add_argument("--debug", action="store_true",
                               help="Show detailed processing info")
+    config_group.add_argument('--model',
+                              choices=['fast', 'quality', 'multilingual'],
+                              default='fast',
+                              help="Model: 'fast'(default)|'quality'|'multilingual'")
 
     return parser
