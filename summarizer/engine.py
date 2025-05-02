@@ -51,6 +51,12 @@ def clean_summary(text):
 
     return text
 
+def format_bullets(text):
+    """Convert sentences to bullet points reliably"""
+    import re
+    # Split at .!? but avoid splitting at decimals/abbreviations
+    sentences = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?|\!)\s', text)
+    return "• " + "\n• ".join(s.strip() for s in sentences if s.strip())
 
 def generate_summary(args):
     try:
@@ -127,11 +133,21 @@ def generate_summary(args):
                 )[0]['summary_text']
                 summary = clean_summary(summary)
 
+        summary_text = format_bullets(summary) if args.bullets else summary
+
         # Final output
         print("\n" + "=" * 50)
         print(f"📝 SUMMARY ({len(summary.split())} words)".center(50))
         print("=" * 50)
-        print(f"\n{summary}\n")
+
+        if args.bullets:
+            # Simple bullet conversion (works for most cases)
+            for sentence in summary.split('.'):
+                if sentence.strip():  # Skip empty strings
+                    print(f"• {sentence.strip()}.")
+        else:
+            print(f"\n{summary}\n")  # Original format
+
         print("=" * 50)
 
         if args.output:
